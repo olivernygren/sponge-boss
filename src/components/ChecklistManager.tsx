@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import {
   Box,
   Button,
@@ -12,7 +13,9 @@ import {
   IconButton,
   Text,
   Heading,
+  Field,
 } from "@chakra-ui/react";
+import { Portal, Dialog, CloseButton } from "@chakra-ui/react";
 import { LuTrash2, LuCheck, LuX, LuPencil, LuPlus } from "react-icons/lu";
 import {
   addChecklistItem,
@@ -31,27 +34,24 @@ interface ChecklistManagerProps {
   initialItems: RememberText[];
 }
 
+interface CreateItemForm {
+  text: string;
+}
+
 export function ChecklistManager({ initialItems }: ChecklistManagerProps) {
   const router = useRouter();
-  const [newItemText, setNewItemText] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleAddItem() {
-    if (!newItemText.trim()) {
-      toaster.create({
-        title: "Varning",
-        description: "Text får inte vara tom",
-        type: "warning",
-      });
-      return;
-    }
+  const createForm = useForm<CreateItemForm>();
 
+  async function handleAddItem(data: CreateItemForm) {
     setIsLoading(true);
     try {
       const formData = new FormData();
-      formData.append("text", newItemText);
+      formData.append("text", data.text);
       await addChecklistItem(formData);
 
       toaster.create({
@@ -60,7 +60,8 @@ export function ChecklistManager({ initialItems }: ChecklistManagerProps) {
         type: "success",
       });
 
-      setNewItemText("");
+      setCreateDialogOpen(false);
+      createForm.reset();
       router.refresh();
     } catch (error) {
       toaster.create({
@@ -149,127 +150,159 @@ export function ChecklistManager({ initialItems }: ChecklistManagerProps) {
 
   return (
     <Box>
-      <Heading size="lg" mb={4}>
-        Kom-ihåg texter
-      </Heading>
+      <Flex justify="space-between" align="center" mb={4}>
+        <Heading size="xl">Kom-ihåg texter</Heading>
 
-      <Stack gap={8}>
-        {/* Add new item form */}
-        <Flex gap={2}>
-          <Input
-            placeholder="Lägg till ny kom-ihåg-text..."
-            value={newItemText}
-            onChange={(e) => setNewItemText(e.target.value)}
-            onKeyUp={(e) => {
-              if (e.key === "Enter") {
-                handleAddItem();
-              }
-            }}
-            disabled={isLoading}
-            flex={1}
-            rounded="lg"
-          />
-          <Button
-            onClick={handleAddItem}
-            colorPalette="teal"
-            disabled={isLoading}
-            loading={isLoading}
-            loadingText="Lägger till..."
-            rounded="lg"
-          >
-            <LuPlus />
-            Lägg till
-          </Button>
-        </Flex>
-
-        {/* List of items */}
-        {initialItems.length === 0 ? (
-          <Card.Root>
-            <Card.Body>
-              <Text color="fg.muted" textAlign="center">
-                Inga texter ännu. Lägg till en ovan!
-              </Text>
-            </Card.Body>
-          </Card.Root>
-        ) : (
-          <Stack gap={2}>
-            {initialItems.map((item) => (
-              <Card.Root key={item.id}>
-                <Card.Body rounded="lg" p={3}>
-                  {editingId === item.id ? (
-                    // Edit mode
-                    <Flex gap={2} align="center">
+        {/* Create Item Dialog */}
+        <Dialog.Root
+          open={createDialogOpen}
+          onOpenChange={(e) => setCreateDialogOpen(e.open)}
+        >
+          <Dialog.Trigger asChild>
+            <Button rounded="lg">
+              <LuPlus />
+              Lägg till text
+            </Button>
+          </Dialog.Trigger>
+          <Portal>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+              <Dialog.Content>
+                <Dialog.Header>
+                  <Dialog.Title>Lägg till kom-ihåg-text</Dialog.Title>
+                </Dialog.Header>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton size="sm" />
+                </Dialog.CloseTrigger>
+                <form onSubmit={createForm.handleSubmit(handleAddItem)}>
+                  <Dialog.Body>
+                    <Field.Root
+                      invalid={!!createForm.formState.errors.text}
+                      required
+                    >
+                      <Field.Label>Text</Field.Label>
                       <Input
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        onKeyUp={(e) => {
-                          if (e.key === "Enter") {
-                            handleUpdateItem(item.id);
-                          }
-                          if (e.key === "Escape") {
-                            cancelEditing();
-                          }
-                        }}
-                        autoFocus
-                        disabled={isLoading}
-                        flex={1}
-                        rounded="lg"
+                        {...createForm.register("text", {
+                          required: "Text krävs",
+                        })}
+                        placeholder="Ange kom-ihåg-text..."
                       />
+                      {createForm.formState.errors.text && (
+                        <Field.ErrorText>
+                          {createForm.formState.errors.text.message}
+                        </Field.ErrorText>
+                      )}
+                    </Field.Root>
+                  </Dialog.Body>
+                  <Dialog.Footer>
+                    <Dialog.ActionTrigger asChild>
+                      <Button variant="outline" rounded="lg">
+                        Avbryt
+                      </Button>
+                    </Dialog.ActionTrigger>
+                    <Button
+                      type="submit"
+                      colorPalette="teal"
+                      loading={isLoading}
+                      rounded="lg"
+                    >
+                      Lägg till
+                    </Button>
+                  </Dialog.Footer>
+                </form>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
+        </Dialog.Root>
+      </Flex>
+
+      {/* List of items */}
+      {initialItems.length === 0 ? (
+        <Card.Root>
+          <Card.Body>
+            <Text color="fg.muted" textAlign="center">
+              Inga texter ännu. Lägg till en ovan!
+            </Text>
+          </Card.Body>
+        </Card.Root>
+      ) : (
+        <Stack gap={2}>
+          {initialItems.map((item) => (
+            <Card.Root key={item.id}>
+              <Card.Body rounded="lg" p={3}>
+                {editingId === item.id ? (
+                  // Edit mode
+                  <Flex gap={2} align="center">
+                    <Input
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyUp={(e) => {
+                        if (e.key === "Enter") {
+                          handleUpdateItem(item.id);
+                        }
+                        if (e.key === "Escape") {
+                          cancelEditing();
+                        }
+                      }}
+                      autoFocus
+                      disabled={isLoading}
+                      flex={1}
+                      rounded="lg"
+                    />
+                    <IconButton
+                      onClick={() => handleUpdateItem(item.id)}
+                      colorPalette="green"
+                      variant="ghost"
+                      disabled={isLoading}
+                      aria-label="Spara"
+                      rounded="lg"
+                    >
+                      <LuCheck />
+                    </IconButton>
+                    <IconButton
+                      onClick={cancelEditing}
+                      variant="ghost"
+                      disabled={isLoading}
+                      aria-label="Avbryt"
+                      rounded="lg"
+                    >
+                      <LuX />
+                    </IconButton>
+                  </Flex>
+                ) : (
+                  // View mode
+                  <Flex justify="space-between" align="center">
+                    <Text flex={1}>{item.text}</Text>
+                    <Flex gap={2}>
                       <IconButton
-                        onClick={() => handleUpdateItem(item.id)}
-                        colorPalette="green"
+                        onClick={() => startEditing(item)}
                         variant="ghost"
+                        size="sm"
                         disabled={isLoading}
-                        aria-label="Spara"
+                        aria-label="Redigera"
                         rounded="lg"
                       >
-                        <LuCheck />
+                        <LuPencil />
                       </IconButton>
                       <IconButton
-                        onClick={cancelEditing}
+                        onClick={() => handleDeleteItem(item.id)}
+                        colorPalette="red"
                         variant="ghost"
+                        size="sm"
                         disabled={isLoading}
-                        aria-label="Avbryt"
+                        aria-label="Ta bort"
                         rounded="lg"
                       >
-                        <LuX />
+                        <LuTrash2 />
                       </IconButton>
                     </Flex>
-                  ) : (
-                    // View mode
-                    <Flex justify="space-between" align="center">
-                      <Text flex={1}>{item.text}</Text>
-                      <Flex gap={2}>
-                        <IconButton
-                          onClick={() => startEditing(item)}
-                          variant="ghost"
-                          size="sm"
-                          disabled={isLoading}
-                          aria-label="Redigera"
-                          rounded="lg"
-                        >
-                          <LuPencil />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => handleDeleteItem(item.id)}
-                          colorPalette="red"
-                          variant="ghost"
-                          size="sm"
-                          disabled={isLoading}
-                          aria-label="Ta bort"
-                          rounded="lg"
-                        >
-                          <LuTrash2 />
-                        </IconButton>
-                      </Flex>
-                    </Flex>
-                  )}
-                </Card.Body>
-              </Card.Root>
-            ))}
-          </Stack>
-        )}
-      </Stack>
+                  </Flex>
+                )}
+              </Card.Body>
+            </Card.Root>
+          ))}
+        </Stack>
+      )}
     </Box>
   );
 }

@@ -24,15 +24,14 @@ export const authOptions: AuthOptions = {
 
   // Detta är avgörande för att lägga till ROLLEn (ADMIN/MEMBER) i sessionen
   callbacks: {
-    async signIn({ profile }) {
-      const email = profile?.email as string | undefined;
+    async signIn({ user }) {
+      const userEmail = user.email as string | undefined;
 
-      const validDomains = ["dotnetmentor.se", "ferrysystems.com"];
+      const existingUser = await prisma.user.findUnique({
+        where: { email: userEmail },
+      });
 
-      if (
-        email &&
-        validDomains.some((domain) => email.endsWith(`@${domain}`))
-      ) {
+      if (existingUser) {
         return true;
       } else {
         return "/unauthorized";

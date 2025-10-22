@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Sponge Boss",
-  description: "Your app description",
+  description: "When kitchen responsibilities matter",
 };
 
 export default function RootLayout({

@@ -40,6 +40,7 @@ export function Header() {
                   fontWeight="medium"
                   color="fg.muted"
                   hideBelow="md"
+                  ml={1}
                 >
                   – When kitchen responsibilities matter
                 </Span>

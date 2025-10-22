@@ -1,11 +1,21 @@
 import { requireAdmin } from "@/lib/auth";
-import { Container, Heading, Text, Stack, Box } from "@chakra-ui/react";
+import {
+  Container,
+  Heading,
+  Text,
+  Stack,
+  Box,
+  SimpleGrid,
+  Separator,
+} from "@chakra-ui/react";
 import { ChecklistManager } from "@/components/ChecklistManager";
-import { getChecklistItems } from "@/app/admin/actions";
+import { UserManagement } from "@/components/UserManagement";
+import { getChecklistItems, getUsers } from "@/app/admin/actions";
 
 export default async function AdminPage() {
   const session = await requireAdmin();
   const items = await getChecklistItems();
+  const users = await getUsers();
 
   return (
     <Container maxW="7xl" py={8}>
@@ -19,7 +29,17 @@ export default async function AdminPage() {
           </Text>
         </Box>
 
-        <ChecklistManager initialItems={items} />
+        <SimpleGrid
+          columns={2}
+          gap={8}
+          border="1px solid"
+          borderColor="border"
+          p={6}
+          rounded="lg"
+        >
+          <UserManagement initialUsers={users} />
+          <ChecklistManager initialItems={items} />
+        </SimpleGrid>
       </Stack>
     </Container>
   );

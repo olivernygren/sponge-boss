@@ -19,6 +19,7 @@ model User {
   emailVerified DateTime?
   image         String?
   role          Role       @default(MEMBER)
+  is_dormant    Boolean    @default(false)
   schedules     Schedule[] // En användare kan ha många schemalagda veckor
 
   // För Auth.js
